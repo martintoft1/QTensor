@@ -17,7 +17,7 @@ from qtensor.toolbox import qaoa_energy_tw_from_graph, get_ordering_algo
 from qtensor.optimisation.TensorNet import QtreeTensorNet
 from qtensor.optimisation.Optimizer import OrderingOptimizer, TamakiOptimizer, WithoutOptimizer
 from qtensor.ProcessingFrameworks import PerfBackend, CMKLExtendedBackend
-from qtensor.optimisation.Optimizer import TamakiTrimSlicing, SlicesOptimizer
+from qtensor.optimisation.Optimizer import TamakiTrimSlicing, SlicesOptimizer, DefaultOptimizer
 from qtensor import DefaultQAOAComposer, QAOAQtreeSimulator
 import qtensor.ProcessingFrameworks as backends
 import qtensor.optimisation.Optimizer as optimizers
@@ -178,7 +178,7 @@ def optimize_qaoa_ansatz_circuit(seed, degree, nodes, p, graph_type, ordering_al
             repeats = 10
         optimizer = RGreedyOptimizer(temp=temp, repeats=repeats)
     elif ordering_algo == 'greedy':
-        optimizer = optimizers.DefaultOptimizer()
+        optimizer = DefaultOptimizer()
     else:
         raise ValueError('Ordering algorithm not supported')
     gamma, beta = [0.1]*p, [0.2]*p
