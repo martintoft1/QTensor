@@ -8,11 +8,12 @@ log.add(sys.stderr, level='INFO')
 from qtensor.utils import get_edge_subgraph
 import networkx as nx
 
-from .CircuitComposer import QAOAComposer, OldQAOAComposer, ZZQAOAComposer, WeightedZZQAOAComposer
+from .CircuitComposer import QAOAComposer, OldQAOAComposer, ZZQAOAComposer, WeightedZZQAOAComposer, MaQAOAComposer
 from .OpFactory import CirqBuilder, QtreeBuilder, QiskitBuilder
 from .OpFactory import QtreeFullBuilder
 from qtensor.Simulate import CirqSimulator, QtreeSimulator
 from qtensor.QAOASimulator import QAOAQtreeSimulator
+from qtensor.QAOASimulator import MaQAOAQSimulator
 from qtensor.QAOASimulator import QAOACirqSimulator
 from qtensor.FeynmanSimulator import FeynmanSimulator
 from qtensor.ProcessingFrameworks import PerfNumpyBackend, NumpyBackend
@@ -51,6 +52,23 @@ class ZZQtreeFullQAOAComposer(ZZQAOAComposer):
 class WeightedZZQtreeQAOAComposer(WeightedZZQAOAComposer):
     def _get_builder_class(self):
         return QtreeBuilder
+    
+# ------------------ CODE ADDITIONS ------------------
+
+# ma-QAOA
+class MaQtreeQAOAComposer(MaQAOAComposer):
+    def _get_builder_class(self):
+        return QtreeBuilder
+
+class SimpMaQtreeComposer(MaQtreeQAOAComposer):
+    @property
+    def circuit(self):
+        return simplify_qtree_circuit(self.builder.circuit)
+    @circuit.setter
+    def circuit(self, circuit):
+        self.builder.circuit = circuit
+    
+# ---------------- END CODE ADDITIONS ----------------
 
 class SimpZZQtreeComposer(ZZQtreeQAOAComposer):
     @property

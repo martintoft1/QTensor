@@ -18,7 +18,7 @@ from qtensor.optimisation.TensorNet import QtreeTensorNet
 from qtensor.optimisation.Optimizer import OrderingOptimizer, TamakiOptimizer, WithoutOptimizer
 from qtensor.ProcessingFrameworks import PerfBackend, CMKLExtendedBackend
 from qtensor.optimisation.Optimizer import TamakiTrimSlicing, SlicesOptimizer, DefaultOptimizer
-from qtensor import DefaultQAOAComposer, QAOAQtreeSimulator
+from qtensor import DefaultQAOAComposer, QAOAQtreeSimulator, SimpMaQtreeComposer, MaQAOAQSimulator
 import qtensor.ProcessingFrameworks as backends
 import qtensor.optimisation.Optimizer as optimizers
 from qtensor.optimisation import RGreedyOptimizer
@@ -275,11 +275,12 @@ def qaoa_energy_tw(nodes, seed, degree, p, graph_type, max_time, max_tw, orderin
 @click.option('--n_processes', default=1)
 @click.option('-P','--profile', default=False, is_flag=True)
 @click.option('-C','--composer-type', default='default')
+@click.option('-V','--qaoa-variant', default='qaoa')
 def qaoa_energy_sim(nodes, seed,
                     degree, p, graph_type,
                     max_time, max_tw, ordering_algo,
                     backend, n_processes, profile,
-                    composer_type='default'):
+                    composer_type, qaoa_variant):
     np.random.seed(seed)
     random.seed(seed)
     if graph_type=='random_regular':
@@ -298,18 +299,55 @@ def qaoa_energy_sim(nodes, seed,
         backend_obj = PerfBackend(print=False)
         backend_obj.backend = Backend()
 
-    sim = QAOAQtreeSimulator(DefaultQAOAComposer, bucket_backend=backend_obj, optimizer=optimizer)
-    start = time.time()
-    if n_processes==1:
-        result = sim.energy_expectation(G, gamma, beta)
-        if profile:
-            print('Profiling results')
-            backend_obj.gen_report()
-    else:
-        result = sim.energy_expectation_parallel(G, gamma, beta, n_processes=n_processes)
-    end = time.time()
-    print(f"Simutation time: {end - start}")
-    print(result)
+    if qaoa_variant=='all':
+        # Run all QAOA variants
+        # Default QAOA
+        sim = QAOAQtreeSimulator(DefaultQAOAComposer, bucket_backend=backend_obj, optimizer=optimizer)
+        start = time.time()
+        if n_processes==1:
+            result = sim.energy_expectation(G, gamma, beta)
+            if profile:
+                print('Profiling results')
+                backend_obj.gen_report()
+        else:
+            result = sim.energy_expectation_parallel(G, gamma, beta, n_processes=n_processes)
+        end = time.time()
+        print(f"Simutation time: {end - start}")
+        print(result)
 
+        # Ma-QAOA
+        sim = MaQAOAQSimulator(SimpMaQtreeComposer, bucket_backend=backend_obj, optimizer=optimizer)
+        # Initialize gammas and betas. Use same values as for standard QAOA
+        gamma = [[np.pi/3 for _ in range(G.number_of_edges())] for _ in range(p)] # One gamma for each edge
+        beta = [[np.pi/2 for _ in range(nodes)] for _ in range(p)] # One beta for each node
+        start = time.time()
+        if n_processes==1:
+            result = sim.energy_expectation(G, gamma, beta)
+            if profile:
+                print('Profiling results')
+                backend_obj.gen_report()
+        else:
+            result = sim.energy_expectation_parallel(G, gamma, beta, n_processes=n_processes)
+        end = time.time()
+        print(f"Simutation time: {end - start}")
+        print(result)
+
+    else: # TODO: Add for ma-qaoa
+        sim = QAOAQtreeSimulator(DefaultQAOAComposer, bucket_backend=backend_obj, optimizer=optimizer)
+        if qaoa_variant=='ma-qaoa':
+            sim = MaQAOAQSimulator(SimpMaQtreeComposer, bucket_backend=backend_obj, optimizer=optimizer)
+            gamma = [[np.pi/3 for _ in range(G.number_of_edges())] for _ in range(p)] # One gamma for each edge
+            beta = [[np.pi/2 for _ in range(nodes)] for _ in range(p)] # One beta for each node
+        start = time.time()
+        if n_processes==1:
+            result = sim.energy_expectation(G, gamma, beta) 
+            if profile:
+                print('Profiling results')
+                backend_obj.gen_report()
+        else:
+            result = sim.energy_expectation_parallel(G, gamma, beta, n_processes=n_processes)
+        end = time.time()
+        print(f"Simutation time: {end - start}")
+        print(result)
 
 cli()

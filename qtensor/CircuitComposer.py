@@ -119,7 +119,6 @@ class OldQAOAComposer(CircuitComposer):
 
     def ansatz_state(self):
         beta, gamma = self.params['beta'], self.params['gamma']
-
         assert(len(beta) == len(gamma))
         p = len(beta) # infering number of QAOA steps from the parameters passed
         self.layer_of_Hadamards()
@@ -164,13 +163,30 @@ class QAOAComposer(OldQAOAComposer):
 
         self.circuit = first_part + second_part
 
-class ZZQAOAComposer(QAOAComposer):
+class ZZQAOAComposer(QAOAComposer): # Uses a direct application of the zz gate, otherwise identical to QAOAComposer
     def append_zz_term(self, q1, q2, gamma):
         self.apply_gate(self.operators.ZZ, q1, q2, alpha=2*gamma)
 
 class WeightedZZQAOAComposer(ZZQAOAComposer):
-
     def cost_operator_circuit(self, gamma, edges=None):
         for i, j, w in self.graph.edges.data('weight', default=1):
             u, v = self.qubits[i], self.qubits[j]
             self.append_zz_term(u, v, gamma*w)
+
+
+# ------------------ CODE ADDITIONS ------------------
+# Multi-angle QAOA composer
+class MaQAOAComposer(ZZQAOAComposer):
+    def mixer_operator(self, betas, nodes=None):
+        if nodes is None: nodes = self.graph.nodes()
+        for n, beta in zip(nodes, betas): # betas should be of same length as nodes
+            qubit = self.qubits[n]
+            self.x_term(qubit, beta)
+    
+    def cost_operator_circuit(self, gammas, edges=None):
+        if edges is None: edges = self.graph.edges()
+        for gamma, (i, j) in zip(gammas, edges): # gammas should be of same length as edges
+            u, v = self.qubits[i], self.qubits[j]
+            self.append_zz_term(u, v, gamma)
+
+# ---------------- END CODE ADDITIONS ----------------

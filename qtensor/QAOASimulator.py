@@ -65,7 +65,6 @@ class QAOASimulator(Simulator):
         C = self._post_process_energy(G, total_E)
         return C
 
-
     def _parallel_unit_edge(self, args):
         return self._get_edge_energy(*args)
 
@@ -130,3 +129,12 @@ class QAOACirqSimulator(QAOASimulator, CirqSimulator):
         trial_result = self.simulate(circuit)
         return np.sum(trial_result.state_vector())
     pass
+
+
+# ------------------ CODE ADDITIONS ------------------
+# Multi-angle QAOA simulator
+class MaQAOAQSimulator(QAOASimulator, QtreeSimulator):
+    pass
+    
+
+# ---------------- END CODE ADDITIONS ----------------
