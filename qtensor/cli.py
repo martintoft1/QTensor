@@ -350,4 +350,5 @@ def qaoa_energy_sim(nodes, seed,
         print(f"Simutation time: {end - start}")
         print(result)
 
-cli()
+if __name__ == '__main__':
+    cli()
