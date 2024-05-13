@@ -5,6 +5,7 @@ import argparse
 import time
 import json
 import pandas as pd
+import os
 
 ### ----------- Convenience functions ----------- ###
 def time_from_current_time(days, hours, minutes, seconds):
@@ -30,7 +31,7 @@ def parse_arguments():
     Returns:
         argparse.Namespace: The parsed command line arguments.
     """
-    parser = argparse.ArgumentParser(description="Run given experiment with a timestamp")
+    parser = argparse.ArgumentParser(description="Arguments for running an experiment.")
     parser.add_argument('type', type=str, help='Type of experiment (prelim, main)')
     parser.add_argument('number', type=int, help='Number of experiment')
     parser.add_argument('start_time', type=str, help='Start time in YYYYMMDD_HHMMSS format')
@@ -132,8 +133,10 @@ def print_statistics_table(experiment, datetime, iterations=1):
 ### ----------- Experiment-specific functions ----------- ###
 def load_graph_and_maxcut():
     # Load the dataset
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    data_file = os.path.join(base_dir, 'torusg3-8.dat')
     G = nx.Graph()
-    with open("./experiments/torusg3-8.dat", "r") as file:
+    with open(data_file, "r") as file:
         for line in file:
             # Extract the first vertex, second vertex, and edge weight
             data = line.strip().split() 
@@ -160,8 +163,8 @@ def preliminary_experiment_1(filename, max_time, processes):
     days, hours, minutes, seconds = map(int, max_time.split(':'))
 
     full_sim(
-        p = 1, n_processes = processes, ordering_algo = 'greedy', backend = 'numpy', ansatz_variant='qaoa', param_initializer = 'fourier', param_optimizer = 'differential_evolution',
-        weighted = True, G = G, max_time = time_from_current_time(days, hours, minutes, seconds), # max_approximation_rate = 0.7,
+        p = 2, n_processes = processes, ordering_algo = 'greedy', backend = 'numpy', ansatz_variant='qaoa', param_initializer = 'fourier', param_optimizer = 'differential_evolution',
+        weighted = True, G = G, max_time = time_from_current_time(days, hours, minutes, seconds), # max_energy_expectation = 0.7,
         optimal_value = optimal_value, post_process_results=post_process_result_dimacs, # max_epochs=4, # max_tw=25, profile=True
         filename=filename
     )
