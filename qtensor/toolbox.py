@@ -66,7 +66,7 @@ def get_slicing_algo(slicing_algo, par_vars, ordering_algo='default'):
     return optimizer
 
 
-def get_ordering_algo(ordering_algo, par_vars=0):
+def get_ordering_algo(ordering_algo, max_tw = None, par_vars=0): #TODO: Legge til max_tw og wait_time ?
     """ Get optimizer instance from its string specifier. """
     if 'tamaki' in ordering_algo:
         wait_time = 10
@@ -74,7 +74,8 @@ def get_ordering_algo(ordering_algo, par_vars=0):
             params = ordering_algo.split('_')
             wait_time = float(params[-1])
         if 'slice' in ordering_algo:
-            max_tw = 25
+            if max_tw is None:
+                max_tw = 25
             optimizer = TamakiTrimSlicing(max_tw=max_tw, wait_time=wait_time)
         else:
             optimizer = TamakiOptimizer(wait_time=wait_time)
