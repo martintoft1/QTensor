@@ -8,12 +8,11 @@ log.add(sys.stderr, level='INFO')
 from qtensor.utils import get_edge_subgraph
 import networkx as nx
 
-from .CircuitComposer import QAOAComposer, OldQAOAComposer, ZZQAOAComposer, WeightedZZQAOAComposer, MaQAOAComposer
+from .CircuitComposer import QAOAComposer, OldQAOAComposer, ZZQAOAComposer, WeightedZZQAOAComposer, MaQAOAComposer, WeightedMaQAOAComposer
 from .OpFactory import CirqBuilder, QtreeBuilder, QiskitBuilder
 from .OpFactory import QtreeFullBuilder
 from qtensor.Simulate import CirqSimulator, QtreeSimulator
-from qtensor.QAOASimulator import QAOAQtreeSimulator
-from qtensor.QAOASimulator import MaQAOAQSimulator
+from qtensor.QAOASimulator import QAOAQtreeSimulator, WeightedQAOASimulator
 from qtensor.QAOASimulator import QAOACirqSimulator
 from qtensor.FeynmanSimulator import FeynmanSimulator
 from qtensor.ProcessingFrameworks import PerfNumpyBackend, NumpyBackend
@@ -52,9 +51,27 @@ class ZZQtreeFullQAOAComposer(ZZQAOAComposer):
 class WeightedZZQtreeQAOAComposer(WeightedZZQAOAComposer):
     def _get_builder_class(self):
         return QtreeBuilder
-    
-# ------------------ CODE ADDITIONS ------------------
 
+class SimpZZQtreeComposer(ZZQtreeQAOAComposer):
+    @property
+    def circuit(self):
+        return simplify_qtree_circuit(self.builder.circuit)
+    @circuit.setter
+    def circuit(self, circuit):
+        self.builder.circuit = circuit
+
+class WeightedSimpZZQtreeQAOAComposer(WeightedZZQtreeQAOAComposer):
+    @property
+    def circuit(self):
+        return simplify_qtree_circuit(self.builder.circuit)
+    @circuit.setter
+    def circuit(self, circuit):
+        self.builder.circuit = circuit
+
+DefaultQAOAComposer = SimpZZQtreeComposer
+WeightedQAOAComposer = WeightedZZQtreeQAOAComposer
+
+# ------------------ NEW VARIANTS ------------------
 # ma-QAOA
 class MaQtreeQAOAComposer(MaQAOAComposer):
     def _get_builder_class(self):
@@ -67,10 +84,13 @@ class SimpMaQtreeComposer(MaQtreeQAOAComposer):
     @circuit.setter
     def circuit(self, circuit):
         self.builder.circuit = circuit
-    
-# ---------------- END CODE ADDITIONS ----------------
 
-class SimpZZQtreeComposer(ZZQtreeQAOAComposer):
+# weighted ma-QAOA
+class WeightedMaQtreeQAOAComposer(WeightedMaQAOAComposer):
+    def _get_builder_class(self):
+        return QtreeBuilder
+    
+class WeightedSimpMaQtreeComposer(WeightedMaQtreeQAOAComposer):
     @property
     def circuit(self):
         return simplify_qtree_circuit(self.builder.circuit)
@@ -78,8 +98,7 @@ class SimpZZQtreeComposer(ZZQtreeQAOAComposer):
     def circuit(self, circuit):
         self.builder.circuit = circuit
 
-DefaultQAOAComposer = SimpZZQtreeComposer
-WeightedQAOAComposer = WeightedZZQtreeQAOAComposer
+# ---------------- END CODE ADDITIONS ----------------
 
 # deprecated
 CCQtreeQAOAComposer = ZZQtreeQAOAComposer
