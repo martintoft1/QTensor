@@ -156,7 +156,7 @@ class SlicesOptimizer(OrderingOptimizer):
 
         self.peo = self.ignored_vars + peo + self.parallel_vars 
         #log.info('peo {}', self.peo)
-        return self.peo, self.parallel_vars, tensor_net
+        return self.peo, tensor_net
 
 class TamakiOptimizer(OrderingOptimizer):
     def __init__(self, *args, wait_time=5, **kwargs):
