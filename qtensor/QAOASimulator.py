@@ -49,7 +49,6 @@ class QAOASimulator(Simulator):
 
         Returns: MaxCut energy expectation
         """
-
         total_E = 0
 
         with tqdm(total=G.number_of_edges(), desc='Edge iteration', ) as pbar:
@@ -129,12 +128,3 @@ class QAOACirqSimulator(QAOASimulator, CirqSimulator):
         trial_result = self.simulate(circuit)
         return np.sum(trial_result.state_vector())
     pass
-
-
-# ------------------ CODE ADDITIONS ------------------
-# Multi-angle QAOA simulator
-class MaQAOAQSimulator(QAOASimulator, QtreeSimulator):
-    pass
-    
-
-# ---------------- END CODE ADDITIONS ----------------
