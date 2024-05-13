@@ -2,6 +2,9 @@ from loguru import logger as log
 from qtensor.utils import get_edge_subgraph
 import networkx as nx
 from .OpFactory import CircuitBuilder
+# import tensorflow as tf
+import numpy as np
+import cirq
 
 class CircuitComposer():
     """ Director for CircuitBuilder, but with a special way to get the builder"""
@@ -100,6 +103,10 @@ class OldQAOAComposer(CircuitComposer):
         #self.circuit.append(self.operators.H(u))
         self.apply_gate(self.operators.XPhase, u, alpha=2*beta)
         #self.circuit.append(self.operators.H(u))
+    
+    def y_term(self, u, beta):
+        self.apply_gate(self.operators.YPhase, u, alpha=2*beta)
+
     def mixer_operator(self, beta, nodes=None):
         if nodes is None: nodes = self.graph.nodes()
         for n in nodes:
@@ -136,7 +143,6 @@ class OldQAOAComposer(CircuitComposer):
 class QAOAComposer(OldQAOAComposer):
     def cone_ansatz(self, edge):
         beta, gamma = self.params['beta'], self.params['gamma']
-
         assert(len(beta) == len(gamma))
         p = len(beta) # infering number of QAOA steps from the parameters passed
         self.layer_of_Hadamards()
@@ -175,7 +181,7 @@ class WeightedZZQAOAComposer(ZZQAOAComposer):
 
 
 # ------------------ CODE ADDITIONS ------------------
-# Multi-angle QAOA composer
+# Multi-angle QAOA composer 
 class MaQAOAComposer(ZZQAOAComposer):
     def mixer_operator(self, betas, nodes=None):
         if nodes is None: nodes = self.graph.nodes()
@@ -188,5 +194,115 @@ class MaQAOAComposer(ZZQAOAComposer):
         for gamma, (i, j) in zip(gammas, edges): # gammas should be of same length as edges
             u, v = self.qubits[i], self.qubits[j]
             self.append_zz_term(u, v, gamma)
+
+# Weighted version of the MaQAOAComposer
+class WeightedMaQAOAComposer(MaQAOAComposer):
+    def cost_operator_circuit(self, gammas, edges=None):
+        if edges is None: edges = self.graph.edges()
+        for gamma, (i, j, w) in zip(gammas, self.graph.edges.data('weight', default=1)): # gammas should be of same length as edges
+            u, v = self.qubits[i], self.qubits[j]
+            self.append_zz_term(u, v, gamma*w)
+
+
+# ADAPT-QAOA composer (Note: not fully implemented)
+"""
+class AdaptQAOASingleComposer(ZZQAOAComposer):
+    def __init__(self, graph, *args, **kwargs):
+        super().__init__(graph, *args, **kwargs)
+        self.opt = tf.keras.optimizers.Adam(learning_rate=0.001) # Adam optimizer
+        self.ops = self.s_pool() # Pool of single-qubit gates
+
+    def ansatz_state(self):
+        beta, gamma = self.params['beta'], self.params['gamma']
+        assert(len(beta) == len(gamma))
+        p = len(beta) # infering number of QAOA steps from the parameters passed
+        self.layer_of_Hadamards()
+        if not self.params['mixer']: # First optimization run, need to initialize mixer. Set it to default XPhase
+            self.params['mixer'] = [[] for _ in range(p)]
+            self.params['mixer'][0] = self.initialize_mixer()
+        for i in range(p):
+            self.cost_operator_circuit(gamma[i])
+            # Dynamically select or construct a new mixer
+            self.select_mixer_operator(beta[i], i)
+            self.mixer_operator_circuit(self.params['mixer'][i])
+
+    def select_mixer_operator(self, gamma, beta, layer): # TODO: Finish method for selecting the mixer operator. Should maybe be implemented partly with methods in FullSimulation.py
+        # Initialize values
+        tol = 1e-5 # Threshold for derivative of expectation value of cost operator
+
+        while True: # Run until stopping criteria is met
+            # TODO: Construct all candidate circuits 
+            
+            # TODO: Measure the energy gradient for every candidate circuit 
+            
+            # TODO: Check if stopping criteria for mixers is met
+            if init is None:
+                init = max(grads)
+            grads_ = [i for i in grads if i >= init]
+            if len(grads_) == 0 or counter > (layer * 2 + 25):
+                break
+            # Stopping criteria is not met, continue
+
+            # TODO: Select the mixer operator associated with the largest component of the gradient, and
+            # optimize all parameters currently in the ansatz, βm, γm, m = 1, ..., k,  for the selected mixer operator
+            base_circuit = circuits[np.argmax(grads)]
+            old = np.inf
+            while True:
+                with tf.GradientTape() as tape:
+                    tape.watch(var)
+                    guess = expectation_layer(base_circuit, symbol_names=[s.name for s in symbols], symbol_values=[var], operators=h)
+                grads = tape.gradient(guess, var)
+                self.opt.apply_gradients(zip([grads], [var]))
+                guess = guess.numpy()[0][0]
+                # TODO: Check if stopping criteria for parameters is met
+                if abs(guess - old) < tol:
+                    break
+                old = guess
+            # TODO: Update parameters
+            params = var.numpy().tolist()
+
+    def s_pool(self):
+        # Method for creating the pool of single-qubit gates
+        # Have 2*nodes + 2 mixers in the pool; one X for every node, one Y for every node, one sum over all X, and one sum over all Y
+        pool = []
+
+        # Sum over all X
+        mixing_ham = 0
+        for n in self.graph.nodes():
+            qubit = self.qubits[n]
+            mixing_ham += cirq.PauliString(self.operators.X.cirq_op(qubit))
+        pool.append(mixing_ham)
+
+        # Sum over all Y
+        mixing_ham = 0
+        for n in self.graph.nodes():
+            qubit = self.qubits[n]
+            mixing_ham += cirq.PauliString(self.operators.Y.cirq_op(qubit))
+        pool.append(mixing_ham)
+
+        # X for every node
+        for n in self.graph.nodes():
+            mixing_ham = 0
+            qubit = self.qubits[n]
+            mixing_ham += cirq.PauliString(self.operators.X.cirq_op(qubit))
+            pool.append(mixing_ham)
+
+        # Y for every node
+        for n in self.graph.nodes():
+            mixing_ham = 0
+            qubit = self.qubits[n]
+            mixing_ham += cirq.PauliString(self.operators.Y.cirq_op(qubit))
+            pool.append(mixing_ham)
+        return pool
+
+    
+# Weighted version of the AdaptQAOASingleComposer
+class WeightedAdaptQAOASingleComposer(AdaptQAOASingleComposer):
+    def cost_operator_circuit(self, gammas, edges=None):
+        if edges is None: edges = self.graph.edges()
+        for gamma, (i, j, w) in zip(gammas, self.graph.edges.data('weight', default=1)): # gammas should be of same length as edges
+            u, v = self.qubits[i], self.qubits[j]
+            self.append_zz_term(u, v, gamma*w)
+"""
 
 # ---------------- END CODE ADDITIONS ----------------
