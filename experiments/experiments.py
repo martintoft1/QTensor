@@ -59,6 +59,8 @@ def experiment(type, number, start_time, iteration = 1, max_time = "00:00:00:10"
     if type == 'prelim':
         if number == 1:
             preliminary_experiment_1(filename, max_time, processes)
+        elif number ==2:
+            preliminary_experiment_2(filename, max_time, processes)
     elif type == 'main':
         if number == 1:
             main_experiment_1(filename, max_time, processes)
@@ -164,6 +166,17 @@ def preliminary_experiment_1(filename, max_time, processes):
 
     full_sim(
         p = 2, n_processes = processes, ordering_algo = 'greedy', backend = 'numpy', ansatz_variant='qaoa', param_initializer = 'fourier', param_optimizer = 'differential_evolution',
+        weighted = True, G = G, max_time = time_from_current_time(days, hours, minutes, seconds), # max_energy_expectation = 0.7,
+        optimal_value = optimal_value, post_process_results=post_process_result_dimacs, # max_epochs=4, # max_tw=25, profile=True
+        filename=filename
+    )
+
+def preliminary_experiment_2(filename, max_time, processes):
+    G, optimal_value = load_graph_and_maxcut()
+    days, hours, minutes, seconds = map(int, max_time.split(':'))
+
+    full_sim(
+        p = 1, n_processes = processes, ordering_algo = 'tamaki', backend = 'numpy', ansatz_variant='qaoa', param_initializer = 'fourier', param_optimizer = 'differential_evolution',
         weighted = True, G = G, max_time = time_from_current_time(days, hours, minutes, seconds), # max_energy_expectation = 0.7,
         optimal_value = optimal_value, post_process_results=post_process_result_dimacs, # max_epochs=4, # max_tw=25, profile=True
         filename=filename
