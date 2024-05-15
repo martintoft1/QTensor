@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 import json
 import argparse
-
+import pandas as pd
+import numpy as np
 
 
 ### ----------- Plotting functions ----------- ###
@@ -52,6 +53,40 @@ def plot_result_experiments(title, xaxis, files):
     plt.show()
 
 
+import matplotlib.pyplot as plt
+
+def create_statistics_table(title, files):
+    table_data = []
+
+    for file in files:
+        with open(f"experiments/simulation_results/{file}", "r") as f:
+            data = json.load(f)
+
+        energy_expectations = [result["expectation_value"] for result in data["individual_simulation_results"]]
+        mean_energy_expectation = np.mean(energy_expectations)
+        median_energy_expectation = np.median(energy_expectations)
+        std_dev_energy_expectation = np.std(energy_expectations)
+        range_energy_expectation = np.ptp(energy_expectations)
+
+        best_expectation_value = data["global_simulation_results"]["best_expectation_value"]
+        average_time = data["global_simulation_results"]["average_time"]
+
+        table_data.append([mean_energy_expectation, median_energy_expectation, best_expectation_value, average_time, std_dev_energy_expectation, range_energy_expectation])
+
+    columns = ["Mean Energy Expectation", "Median Energy Expectation", "Best Expectation Value", "Average Time", "Standard Deviation of Energy Expectation", "Range of Energy Expectation"]
+    fig, ax = plt.subplots(1, 1)
+    ax.axis('tight')
+    ax.axis('off')
+    table = ax.table(cellText=table_data, colLabels=columns, cellLoc = 'center', loc='center')
+    table.auto_set_font_size(False)
+    table.set_fontsize(6)
+
+    plt.title(title)
+    plt.show()
+
+
 if __name__ == '__main__':
-    args = parse_arguments()
-    plot_result_experiments(args.title, args.xaxis, args.files)
+    #create_statistics_table("QAOA", ["experiment_1_datetime_20240515011309_iteration_1.json"])
+    create_statistics_table("ma-QAOA", ["experiment_2_datetime_20240515045634_iteration_1.json"])
+    #args = parse_arguments()
+    #plot_result_experiments(args.title, args.xaxis, args.files)
