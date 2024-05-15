@@ -65,6 +65,9 @@ setuptools.setup(name='qtensor',
                  license='Apache',
                  packages=setuptools.find_packages(),
                  install_requires=REQUIRED_PACKAGES,
+                 setup_requires=[
+                    'Cython',  
+                ],
                  extras_require={
                      'tensorflow': ['tensorflow<=1.15'],
                  },
