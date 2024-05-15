@@ -16,6 +16,12 @@ Before you begin, ensure you have met the following requirements:
 ## System-level dependencies
 Before installing the QTensor, you need to install some system-level dependencies. Here's how you can do it on different systems:
 
+### pip, setuptools and wheel
+Make sure that pip, setuptools, and wheel are up to date in your environment to help avoid many common issues with package installations
+
+```bash
+python -m pip install --upgrade pip setuptools wheel
+```
 
 ### mpich
 
@@ -28,8 +34,6 @@ Before installing the QTensor, you need to install some system-level dependencie
     ```bash
     sudo apt-get install mpich
     ```
-
-### Setting up the Environment
 
 After installing `mpich`, you might need to set the `mpicc` path. This step is only necessary if the `mpicc` path is not set correctly.
 
@@ -63,20 +67,21 @@ Remember, if you choose the permanent option, you need to source your profile fi
 
 ## Additional dependencies
 
-### Tamaki solver
+### Qtree
 
-The tamaki solver repository should be already cloned into
-`QTensor/qtree/thirdparty/tamaki_treewidth`. If it is not, it is because you did not clone the QTensor-repository with the `--recurse-submodules` flag. You can clone it manually by navigating to the QTensor/qtree/thirdparty/ repository and using the following command:
+The Qtree repository should be already cloned into `QTensor/qtree`. If it is not, it is because you did not clone the QTensor-repository with the `--recurse-submodules` flag. You can clone it manually with:
 
 ```bash
-git clone https://github.com/TCS-Meiji/PACE2017-TrackA
+git submodule update --init --recursive
 ```
 
-To compile it, go to the directory and run `make heuristic`.
+### Tamaki solver
+
+Now, if you have cloned `qtree`, and want to use the tamaki solver, you need to compile it. To compile it, go to the directory and run `make heuristic`.
 
 ```bash
-> cd QTensor/qtree/thirdparty/tamaki_treewidth
-> make heuristic 
+cd qtree/thirdparty/tamaki_treewidth
+make heuristic 
 javac tw/heuristic/*.java
 ```
 
