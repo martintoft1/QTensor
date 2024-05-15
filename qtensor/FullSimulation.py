@@ -20,6 +20,13 @@ import qtensor.ProcessingFrameworks as backends
 
 
 ### ----------- Convenience functions for storing available system resources   ----------- ###
+def get_cpu_name():
+    with open("/proc/cpuinfo", "r") as f:
+        for line in f:
+            if "model name" in line:
+                return line.split(":")[1].strip()
+    return "CPU name not found"
+
 def save_cpu_resources():
     """
     Retrieves and formats information about the system's CPU resources.
@@ -29,6 +36,7 @@ def save_cpu_resources():
     CPU frequencies, CPU usage per core, and total CPU usage.
     """
     cpu_resources = {}
+    cpu_resources["Name"] = get_cpu_name()
     cpu_resources["Physical cores"] = psutil.cpu_count(logical=False)
     cpu_resources["Total cores"] = psutil.cpu_count(logical=True)
 
@@ -124,15 +132,13 @@ def choose_backend(backend_str):
     """
     if backend_str=='numpy':
         return backends.NumpyBackend
-    else:
-        raise Exception('Unsupported backend')
-    """ 
-    # Neither of these currently work
+    # Note: neither of these currently work
     elif backend_str=='mkl':
         return backends.CMKLExtendedBackend
     elif backend_str=='exatn':
         return backends.ExaTnBackend
-    """
+    else:
+        raise Exception('Unsupported backend')
     
 def initialize_composer(ansatz_variant, weighted):
     """
@@ -425,7 +431,7 @@ def full_sim(p, n_processes, ordering_algo,
             param_initializer = 'random', param_optimizer = 'differential_evolution',
             profile = False, weighted = False, max_tw = None,
             nodes = None, degree = None, graph_type=None, seed = None, G=None,
-            max_energy_expectation = None, max_time = None, max_epochs = 1000, 
+            max_energy_expectation = None, max_time = None, max_epochs = None, 
             optimal_value = None, post_process_results = None,
             filename = None):
     """
@@ -531,11 +537,13 @@ def full_sim(p, n_processes, ordering_algo,
     # Prepare simulation results
     gamma, beta = recreate_gamma_beta_from_x0(ansatz_variant=ansatz_variant, p=p, G=G, x0=x0, param_initializer=param_initializer)
     simulation_results = {
+        'total_iterations': results_list[-1]['iteration'],
         'total_time': sum(result['time'] for result in results_list),
+        'average_time': sum(result['time'] for result in results_list) / len(results_list),
         'final_expectation_value': results_list[-1]['expectation_value'],
+        'best_expectation_value': best_expectation_value,
         'final_gamma': gamma,
         'final_beta': beta,
-        'best_expectation_value': best_expectation_value,
         'best_gamma': best_gamma,
         'best_beta': best_beta
     }
