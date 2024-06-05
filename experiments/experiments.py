@@ -165,14 +165,14 @@ def preliminary_experiment_1(filename, max_time, processes):
     """
         Experiment different preliminary configurations
     """
-    G, optimal_value = load_graph_and_maxcut()
+    # G, optimal_value = load_graph_and_maxcut()
     days, hours, minutes, seconds = map(int, max_time.split(':'))
 
     full_sim(
-        p = 2, n_processes = processes, ordering_algo = 'greedy', backend = 'numpy', ansatz_variant='qaoa', param_initializer = 'fourier', param_optimizer = 'differential_evolution',
-        weighted = True, G = G, max_time = time_from_current_time(days, hours, minutes, seconds), # max_energy_expectation = 0.7,
-        optimal_value = optimal_value, post_process_results=post_process_result_dimacs, # max_epochs=4, # max_tw=25, profile=True
-        filename=filename
+        p = 3, n_processes = processes, ordering_algo = 'greedy', backend = 'numpy', ansatz_variant='qaoa', param_initializer = 'fourier', param_optimizer = 'BFGS', 
+        weighted = True, #G = G, 
+        max_time = time_from_current_time(days, hours, minutes, seconds),
+        filename=filename, degree=3, nodes=16, seed=42, graph_type='random_regular'
     )
 
 def main_experiment_1(filename, max_time, processes):
@@ -208,5 +208,7 @@ def main_experiment_2(filename, max_time, processes):
 
 ### ----------- Run the given experiment ----------- ###
 if __name__ == '__main__':
-    args = parse_arguments()
-    experiment(args.type, args.number, args.iteration, args.start_time, args.max_time, args.processes, args.hardware)
+    #args = parse_arguments()
+    #experiment(args.type, args.number, args.iteration, args.start_time, args.max_time, args.processes, args.hardware)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    experiment('prelim', 1, timestamp, 1, '00:01:00:00', 4, 'local')
