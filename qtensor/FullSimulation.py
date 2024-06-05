@@ -21,11 +21,14 @@ import qtensor.ProcessingFrameworks as backends
 
 ### ----------- Convenience functions for storing available system resources   ----------- ###
 def get_cpu_name():
-    with open("/proc/cpuinfo", "r") as f:
-        for line in f:
-            if "model name" in line:
-                return line.split(":")[1].strip()
-    return "CPU name not found"
+    try:
+        with open("/proc/cpuinfo", "r") as f:
+            for line in f:
+                if "model name" in line:
+                    return line.split(":")[1].strip()
+    except Exception as e:
+        print("Error:", e)
+        return "CPU name not found"
 
 def save_cpu_resources():
     """
@@ -410,15 +413,31 @@ def parameter_optimization(x0, n_processes, profile, sim, be_obj, G, ansatz_vari
     best_gamma, best_beta = [initial_gamma], [initial_beta]
 
     # Run the optimization
+    # Differential evolution
     if param_optimizer == "differential_evolution":
         # Note that when using differential_evolution, maxiter is the maximum number of generations over which the entire population is evolved, and the actual number is given by formula (maxiter + 1) * popsize * (N - N_equal). Determining the actual number of iterations the parameters are optimized for is not possible with this optimizer
         try:
             result = scipy.optimize.differential_evolution(
-                func=one_sim, 
+                func=one_sim, # The objective function to be minimized
                 bounds=bounds, 
                 x0=x0,
                 args=(n_processes, profile, sim, be_obj, G, ansatz_variant, p, post_process_results, iteration, results_list, param_initializer, continue_running, optimal_value, best_expectation_value, best_gamma, best_beta, param_optimizer),
                 atol=1e-12  # Set the absolute tolerance for convergence. Set it to a very low value to ensure that termination is only based on the stopping criteria
+            )
+        except Exception as e:
+            print(e)
+        return results_list, best_expectation_value[0], best_gamma[0], best_beta[0]
+    # BFGS
+    elif param_optimizer == "BFGS":
+        try:
+            result = scipy.optimize.minimize(
+                fun=one_sim, 
+                bounds=bounds, 
+                x0=x0, 
+                method='BFGS',  # The optimization method
+                jac=compute_exact_gradient,  # The gradient computation function
+                options={'disp': True},  # Display the convergence messages
+                args=(n_processes, profile, sim, be_obj, G, ansatz_variant, p, post_process_results, iteration, results_list, param_initializer, continue_running, optimal_value, best_expectation_value, best_gamma, best_beta, param_optimizer)
             )
         except Exception as e:
             print(e)
@@ -480,6 +499,10 @@ def full_sim(p, n_processes, ordering_algo,
             G = nx.erdos_renyi_graph(nodes, degree/(nodes-1), seed=seed)
         else:
             raise Exception('Unsupported graph type')
+        # If graph should be weighted, add weights to the edges
+        if weighted:
+            for (u, v) in G.edges():
+                G.edges[u,v]['weight'] = random.randint(0, 1)
 
     # Initialize the optimizer
     opt = get_ordering_algo(ordering_algo=ordering_algo, max_tw=max_tw)
@@ -542,10 +565,10 @@ def full_sim(p, n_processes, ordering_algo,
         'average_time': sum(result['time'] for result in results_list) / len(results_list),
         'final_expectation_value': results_list[-1]['expectation_value'],
         'best_expectation_value': best_expectation_value,
-        'final_gamma': gamma,
-        'final_beta': beta,
-        'best_gamma': best_gamma,
-        'best_beta': best_beta
+        'final_gamma': gamma.tolist() if isinstance(gamma, np.ndarray) else gamma,
+        'final_beta': beta.tolist() if isinstance(beta, np.ndarray) else beta,
+        'best_gamma': best_gamma.tolist() if isinstance(best_gamma, np.ndarray) else best_gamma,
+        'best_beta': best_beta.tolist() if isinstance(best_beta, np.ndarray) else best_beta,
     }
 
     # Set filename if not given
@@ -560,7 +583,7 @@ def full_sim(p, n_processes, ordering_algo,
 
 
 ### Not used in the current implementation, but could be useful for future work
-def compute_exact_gradient(x0, n_processes, store_results, profile, sim, be_obj, G, ansatz_variant, p, post_process_results, iteration, results_list):
+def compute_exact_gradient(x0, n_processes, profile, sim, be_obj, G, ansatz_variant, p, post_process_results, iteration, results_list, param_initializer, continue_running, optimal_value, best_expectation_value, best_gamma, best_beta, param_optimizer):
     """
     Compute the exact gradient of the expectation value with respect to the parameters.
     """
@@ -572,9 +595,9 @@ def compute_exact_gradient(x0, n_processes, store_results, profile, sim, be_obj,
         x0_minus = x0.copy()
         x0_minus[i] -= epsilon
         print("Computing gradient 'f_plus' for parameter", i+1, "of", len(x0), "parameters.")
-        f_plus = one_sim(x0_plus, n_processes, store_results, profile, sim, be_obj, G, ansatz_variant, p, post_process_results, iteration, results_list)
+        f_plus = one_sim(x0_plus, n_processes, profile, sim, be_obj, G, ansatz_variant, p, post_process_results, iteration, results_list, param_initializer, continue_running, optimal_value, best_expectation_value, best_gamma, best_beta, param_optimizer)
         print("Computing gradient 'f_minus' for parameter", i+1, "of", len(x0), "parameters.")
-        f_minus = one_sim(x0_minus, n_processes, store_results, profile, sim, be_obj, G, ansatz_variant, p, post_process_results, iteration, results_list)
+        f_minus = one_sim(x0_minus, n_processes, profile, sim, be_obj, G, ansatz_variant, p, post_process_results, iteration, results_list, param_initializer, continue_running, optimal_value, best_expectation_value, best_gamma, best_beta, param_optimizer)
         grad[i] = (f_plus - f_minus) / (2 * epsilon)
         print("Gradient for parameter", i+1, "of", len(x0), "parameters:", grad[i])
     return grad
